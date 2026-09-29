@@ -15,7 +15,6 @@
    ██║  ██║██║  ██║╚██████╗██║  ██╗
    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 
-         T   O   O   L
 ```
 
 # 🔥 BARA HACK TOOL
@@ -188,4 +187,152 @@ $ python main.py
 │  • Suara beep            │
 │  • Fake BSOD             │
 └────────────┬─────────────┘
-             ▼
+             ▼┌──────────────────────────┐
+│  Tekan ESC               │
+│  → Prank stop            │
+│  → Terminal balik        │
+└──────────────────────────┘
+```
+
+---
+
+## 🛡️ KENAPA 100% AMAN
+
+<table>
+<tr>
+<th>Yang Dilakukan MEMZ Asli</th>
+<th>BARA HACK TOOL</th>
+</tr>
+<tr><td>❌ Overwrite MBR</td><td>✅ TIDAK</td></tr>
+<tr><td>❌ Hapus file C:\</td><td>✅ TIDAK</td></tr>
+<tr><td>❌ Encrypt file</td><td>✅ TIDAK</td></tr>
+<tr><td>❌ Nyentuh registry</td><td>✅ TIDAK</td></tr>
+<tr><td>❌ Konek internet</td><td>✅ TIDAK</td></tr>
+<tr><td>❌ Persist startup</td><td>✅ TIDAK</td></tr>
+<tr><td>❌ Disable Task Manager</td><td>✅ TIDAK</td></tr>
+<tr><td>❌ Modifikasi system file</td><td>✅ TIDAK</td></tr>
+</table>
+
+**Cuma 3 hal yang dilakukan:**
+1. Bikin window fullscreen Tkinter
+2. Gerakin cursor pakai `win32api.SetCursorPos`
+3. Bunyiin `winsound.Beep`
+
+**Tutup program → semua hilang → gak ada sisa.**
+
+---
+
+## ⚠️ TROUBLESHOOTING
+
+<details>
+<summary><b>ESC gak work?</b></summary>
+
+1. Tekan **Alt + F4**
+2. **Ctrl + Alt + Del** → Task Manager → kill `python.exe`
+3. **Ctrl + Shift + Esc** → Task Manager
+4. **Restart PC** (paling terakhir)
+
+99.9% ESC bakal work karena udah di-bind di kode.
+</details>
+
+<details>
+<summary><b>Warna gak muncul di terminal?</b></summary>
+
+Jalankan:
+```powershell
+Set-ItemProperty -Path "HKCU:\Console" -Name "VirtualTerminalLevel" -Value 1
+```
+Pakai **Windows Terminal** untuk hasil terbaik.
+</details>
+
+<details>
+<summary><b>Cursor gak gerak sendiri?</b></summary>
+
+Install pywin32:
+```powershell
+pip install pywin32
+```
+</details>
+
+<details>
+<summary><b>Suara gak muncul?</b></summary>
+
+`winsound` cuma work di Windows. Kalau pakai WSL/Linux, suara gak jalan.
+</details>
+
+<details>
+<summary><b>Antivirus blokir .exe?</b></summary>
+
+Windows Defender kadang blokir .exe yang baru di-build. Tambahkan exclusion di Windows Security → Virus & threat protection.
+</details>
+
+---
+
+## 📁 STRUKTUR
+
+```
+barakimak/
+│
+├── main.py                  # Entry point
+├── ui.py                    # UI, banner, warna
+├── requirements.txt         # Dependencies
+├── install.bat              # Installer
+├── run.bat                  # Runner
+├── build.bat                # Build .exe
+├── README.md                # File ini
+│
+└── modules/
+    ├── __init__.py
+    └── virus_prank.py       # Prank simulator
+```
+
+---
+
+## 🎨 TECH STACK
+
+<div align="center">
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Tkinter](https://img.shields.io/badge/Tkinter-GUI-blue?style=for-the-badge&logo=python&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
+![Colorama](https://img.shields.io/badge/Colorama-CLI-green?style=for-the-badge)
+
+</div>
+
+---
+
+## ⚠️ DISCLAIMER
+
+> **Educational Purposes Only.**
+>
+> Tool ini dibuat untuk **edukasi, prank teman, dan konten kreator**.
+> **BUKAN** untuk menyerang, merusak, atau mengganggu sistem orang lain.
+> Segala penyalahgunaan di luar tanggung jawab pembuat.
+> Patuhi hukum yang berlaku di wilayahmu.
+
+---
+
+## 🏆 CREDITS
+
+<div align="center">
+
+<img src="https://user-images.githubusercontent.com/74038190/216122041-518ac897-8d92-4c6b-9b3f-ca01dcaf38ee.png" width="120">
+
+### 🔥 BARA HACK TOOL 🔥
+
+**Created by BARA**
+
+*"Refusal burned 999x — no noise, only execution."*
+
+---
+
+⭐ **Kalau repo ini berguna, kasih bintang!** ⭐
+
+---
+
+```
+Made with ❤️ by BARA
+Refusal Burned 999X
+```
+
+</div>
