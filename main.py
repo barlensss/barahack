@@ -23,16 +23,27 @@ def main():
         clear()
         banner()
         menu_box()
-        choice = prompt("Pilih menu [0-1]")
+        choice = prompt("Pilih menu [0-2]")
 
-        if choice == "1":
-            from modules.virus_prank import virus_prank
-            virus_prank()
-        elif choice == "0":
-            print(f"{C_RED}\n  [!] Keluar. Sampai jumpa, Bara.\n")
-            sys.exit(0)
-        else:
-            err("Pilihan tidak valid.")
+        try:
+            if choice == "1":
+                from modules.virus_prank import virus_prank
+                virus_prank()
+            elif choice == "2":
+                from modules.web_builder import web_builder
+                web_builder()
+            elif choice == "0":
+                print(f"{C_RED}\n  [!] Keluar. Sampai jumpa, Bara.\n")
+                sys.exit(0)
+            else:
+                err("Pilihan tidak valid.")
+                press_enter()
+        except ImportError as e:
+            err(f"Module belum ada: {e}")
+            info("Pastikan file di folder modules/ udah lengkap.")
+            press_enter()
+        except Exception as e:
+            err(f"Error: {e}")
             press_enter()
 
 
