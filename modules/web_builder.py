@@ -1,7 +1,8 @@
 # ============================================================
-#   BARA HACK TOOL - WEB BUILDER
+#   BARA HACK TOOL - WEB BUILDER v2
 #   Created by Bara
-#   Convert URL → .EXE (Windows) atau .APK (butuh Android SDK)
+#   Convert URL → .EXE (Windows) atau .APK (Android)
+#   Fix: Windows npm.cmd detection
 # ============================================================
 
 import os
@@ -15,24 +16,48 @@ from ui import (section, prompt, err, info, warn, ok, press_enter,
 DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads", "bara-builds")
 
 
-def check_node():
+# ============ DETECT NODE / NPM (WINDOWS-AWARE) ============
+def run_cmd(cmd, timeout=10):
+    """Jalanin perintah dengan shell=True — work di Windows."""
     try:
-        r = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=10)
-        return r.returncode == 0
-    except Exception:
-        return False
+        r = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            shell=True,           # PENTING: biar npm.cmd ke-detect
+            encoding="utf-8",
+            errors="ignore"
+        )
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except Exception as e:
+        return -1, str(e)
+
+
+def check_node():
+    code, out = run_cmd("node --version")
+    if code == 0 and out.strip().startswith("v"):
+        return out.strip()
+    return None
 
 
 def check_npm():
-    try:
-        r = subprocess.run(["npm", "--version"], capture_output=True, text=True, timeout=10)
-        return r.returncode == 0
-    except Exception:
-        return False
+    # Di Windows, npm itu npm.cmd — pakai shell=True biar ke-detect
+    code, out = run_cmd("npm --version")
+    if code == 0 and out.strip():
+        return out.strip()
+    return None
 
 
+def check_npx():
+    code, out = run_cmd("npx --version")
+    if code == 0 and out.strip():
+        return out.strip()
+    return None
+
+
+# ============ BUILD EXE ============
 def build_exe(url, app_name):
-    """Build web → EXE pakai Electron (sitedock)."""
     out_dir = os.path.join(DOWNLOAD_DIR, app_name)
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
@@ -42,16 +67,10 @@ def build_exe(url, app_name):
     info(f"Building EXE dari: {url}")
     info(f"Output: {out_dir}")
     print()
-
-    # Pakai npx sitedock
-    cmd = [
-        "npx", "-y", "sitedock", url,
-        "--name", app_name,
-        "--out", DOWNLOAD_DIR,
-        "--package"
-    ]
-
     print(f"{C_YELLOW}  [i] Menjalankan sitedock (butuh waktu 1-3 menit)...{C_WHITE}\n")
+
+    # Pakai shell=True biar npm.cmd / npx.cmd ke-detect
+    cmd = f'npx -y sitedock "{url}" --name "{app_name}" --out "{DOWNLOAD_DIR}" --package'
 
     try:
         proc = subprocess.Popen(
@@ -59,7 +78,7 @@ def build_exe(url, app_name):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            shell=True,
+            shell=True,           # PENTING
             encoding="utf-8",
             errors="ignore"
         )
@@ -89,16 +108,13 @@ def build_exe(url, app_name):
         return None
 
 
+# ============ BUILD APK ============
 def build_apk(url, app_name):
-    """Build web → APK. Butuh Android SDK + JDK."""
     info("Build APK butuh Android SDK + JDK 8+")
     print()
     warn("Kalau belum install:")
     print(f"{C_WHITE}    1. Android Studio: https://developer.android.com/studio")
     print(f"{C_WHITE}    2. JDK 8+: https://adoptium.net")
-    print()
-    warn("Setelah install, edit PATH environment variable:")
-    print(f"{C_WHITE}    ANDROID_HOME = C:\\Users\\{os.getlogin()}\\AppData\\Local\\Android\\Sdk")
     print()
 
     confirm = prompt("Android SDK udah ke-install? (y/n)")
@@ -107,10 +123,11 @@ def build_apk(url, app_name):
         press_enter()
         return
 
-    # Cek ANDROID_HOME
     android_home = os.environ.get("ANDROID_HOME", "")
     if not android_home or not os.path.isdir(android_home):
         err("ANDROID_HOME gak ke-set atau folder gak ada.")
+        info("Set ANDROID_HOME ke folder SDK kamu, contoh:")
+        print(f"{C_WHITE}    setx ANDROID_HOME \"C:\\Users\\{os.getlogin()}\\AppData\\Local\\Android\\Sdk\"")
         press_enter()
         return
 
@@ -118,28 +135,22 @@ def build_apk(url, app_name):
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir, ignore_errors=True)
+    os.makedirs(out_dir, exist_ok=True)
 
     info(f"Building APK dari: {url}")
     info(f"Output: {out_dir}")
     print()
 
-    # Pakai web2droid (kalau ada) atau webapkify
-    cmd = [
-        "npx", "-y", "webapkify", "init"
-    ]
-
-    # Setup project
-    os.makedirs(out_dir, exist_ok=True)
+    cwd_old = os.getcwd()
     os.chdir(out_dir)
 
     try:
         info("Init project...")
-        subprocess.run(cmd, shell=True, timeout=120)
+        subprocess.run("npx -y webapkify init", shell=True, timeout=120)
 
-        # Bikin config
         config = f'''{{
   "appName": "{app_name}",
-  "appId": "com.bara.{app_name.lower().replace(' ', '')}",
+  "appId": "com.bara.{app_name.lower().replace(' ', '').replace('-', '')}",
   "version": "1.0.0",
   "url": "{url}"
 }}'''
@@ -148,20 +159,21 @@ def build_apk(url, app_name):
 
         info("Build APK...")
         proc = subprocess.Popen(
-            ["npx", "-y", "webapkify", "build"],
+            "npx -y webapkify build",
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, shell=True, encoding="utf-8", errors="ignore"
         )
         for line in proc.stdout:
             print(f"{C_WHITE}  {line.rstrip()}")
         proc.wait()
-
     except Exception as e:
         err(f"Build gagal: {e}")
+        os.chdir(cwd_old)
         press_enter()
         return
+    finally:
+        os.chdir(cwd_old)
 
-    # Cari .apk
     apk_path = None
     for root, _, files in os.walk(out_dir):
         for f in files:
@@ -179,25 +191,40 @@ def build_apk(url, app_name):
     press_enter()
 
 
+# ============ ENTRY POINT ============
 def web_builder():
     section("WEB BUILDER - Web to EXE / APK")
 
     # Cek Node.js
-    if not check_node():
+    node_ver = check_node()
+    if not node_ver:
         err("Node.js belum keinstall.")
-        info("Install dulu: winget install OpenJS.NodeJS")
+        info("Install: winget install OpenJS.NodeJS")
+        info("Setelah install, TUTUP PowerShell → buka BARU.")
         press_enter()
         return
 
-    if not check_npm():
-        err("npm belum keinstall.")
+    npm_ver = check_npm()
+    if not npm_ver:
+        err("npm gak terdeteksi.")
+        warn("Coba fix ini dulu di PowerShell:")
+        print(f"{C_WHITE}    1. Tutup PowerShell, buka BARU")
+        print(f"{C_WHITE}    2. Cek: npm --version")
+        print(f"{C_WHITE}    3. Kalau masih error, cek PATH:")
+        print(f"{C_WHITE}       $env:Path")
         press_enter()
         return
 
-    ok("Node.js + npm terdeteksi")
+    ok(f"Node.js: {node_ver}")
+    ok(f"npm    : v{npm_ver}")
+    print()
 
     # Verifikasi URL
     url = prompt("Masukkan URL website (contoh: https://google.com)")
+    if not url:
+        err("URL kosong.")
+        press_enter()
+        return
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
@@ -207,11 +234,13 @@ def web_builder():
         err("Nama app kosong.")
         press_enter()
         return
+    # Bersihin nama
+    app_name = app_name.replace(" ", "").replace("-", "")
 
     # Pilih type
     print()
-    print(f"  {C_YELLOW}[1]{C_WHITE} Web → EXE (Windows) — Real build")
-    print(f"  {C_YELLOW}[2]{C_WHITE} Web → APK (Android) — Butuh Android SDK")
+    print(f"  {C_YELLOW}[1]{C_WHITE} Web → EXE (Windows)")
+    print(f"  {C_YELLOW}[2]{C_WHITE} Web → APK (Android — butuh Android SDK)")
     print()
     choice = prompt("Pilih [1/2]")
 
