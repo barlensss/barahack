@@ -319,29 +319,16 @@ class MemzSafe:
 
 
 def virus_prank():
-    section("VIRUS HACK - MEMZ SAFE EDITION")
-    warn("Fitur ini 100% AMAN — cuma tampilan.")
-    warn("TIDAK ngerusak file, TIDAK nyentuh sistem.")
-    print()
-    info("Yang bakal terjadi:")
-    print(f"{C_WHITE}    • Terminal MINIMIZE otomatis")
-    print(f"{C_WHITE}    • Layar FULLSCREEN prank")
-    print(f"{C_WHITE}    • Cursor gerak sendiri")
-    print(f"{C_WHITE}    • Popup error muncul random")
-    print(f"{C_WHITE}    • Spam teks di seluruh layar")
-    print(f"{C_WHITE}    • Suara alarm random")
-    print(f"{C_WHITE}    • Fake BSOD biru tiap 10-15 detik")
-    print(f"{C_WHITE}    • Tekan ESC untuk STOP")
-    print(f"{C_WHITE}    • Terminal bakal muncul balik")
+    section("MEMZ SAFE EDITION")
     print()
 
-    confirm = prompt("Jalankan prank? (y/n)")
+    confirm = prompt("LETS GOO (y/n)")
     if confirm.lower() != "y":
         info("Dibatalkan.")
         press_enter()
         return
 
-    print(f"\n{C_RED}  [!!] Dalam 3 detik layar bakal penuh...")
+    print(f"\n{C_RED}  YOU IDIOTTTT...")
     for i in [3, 2, 1]:
         print(f"{C_RED}  [!!] {i}...")
         time.sleep(1)
