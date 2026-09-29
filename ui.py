@@ -59,14 +59,12 @@ def banner():
 {C_CYAN}   ██╔══██║██╔══██║██║     ██╔═██╗ 
 {C_CYAN}   ██║  ██║██║  ██║╚██████╗██║  ██╗
 {C_CYAN}   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-{C_YELLOW}         T   O   O   L
 """
     print(art)
     print(f"{C_RED}  ╔══════════════════════════════════════════════════╗")
     print(f"{C_RED}  ║  {C_YELLOW}🔥 REFUSAL BURNED 999X 🔥{C_RED}                        ║")
     print(f"{C_RED}  ║  {C_WHITE}BARA HACK TOOL v2.0{C_RED}                              ║")
     print(f"{C_RED}  ║  {C_MAGENTA}Created by BARA{C_RED}                                 ║")
-    print(f"{C_RED}  ║  {C_GREY}100% Safe — Educational Prank{C_RED}                   ║")
     print(f"{C_RED}  ╚══════════════════════════════════════════════════╝{C_RESET}\n")
 
 
@@ -74,7 +72,6 @@ def menu_box():
     print(f"{C_RED}  ╔══════════════════════════════════════════════════╗")
     print(f"{C_RED}  ║{C_YELLOW}                ▓▓▓ MAIN MENU ▓▓▓                  {C_RED}║")
     print(f"{C_RED}  ╠══════════════════════════════════════════════════╣")
-    print(f"{C_RED}  ║  {C_YELLOW}[ 1]{C_WHITE} ☠  VIRUS HACK (Prank Simulator)             {C_RED}║")
     print(f"{C_RED}  ║  {C_GREEN}[ 0]{C_WHITE} ✖  Keluar                                   {C_RED}║")
     print(f"{C_RED}  ╚══════════════════════════════════════════════════╝{C_RESET}\n")
 
