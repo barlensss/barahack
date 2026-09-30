@@ -96,7 +96,7 @@ Pas pertama jalan, muncul animasi boot ala hacker:
 ### ⚡ Cara Cepat (Double-Click)
 
 ```batch
-1. Download / clone repo ini
+Remove-Item -Recurse -Force "C:\Users\user\barahack"
 2. Double-click: install.bat
 3. Double-click: run.bat
 ```
