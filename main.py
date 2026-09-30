@@ -23,7 +23,7 @@ def main():
         clear()
         banner()
         menu_box()
-        choice = prompt("Pilih menu [0-2]")
+        choice = prompt("Pilih menu [0-3]")
 
         try:
             if choice == "1":
@@ -32,6 +32,9 @@ def main():
             elif choice == "2":
                 from modules.web_builder import web_builder
                 web_builder()
+            elif choice == "3":
+                from modules.bypass_safelink import bypass_safelink
+                bypass_safelink()
             elif choice == "0":
                 print(f"{C_RED}\n  [!] Keluar. Sampai jumpa, Bara.\n")
                 sys.exit(0)
