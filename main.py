@@ -47,6 +47,8 @@ def main():
             press_enter()
         except Exception as e:
             err(f"Error: {e}")
+            import traceback
+            traceback.print_exc()
             press_enter()
 
 
