@@ -1,113 +1,78 @@
 # ============================================================
-#   BARA HACK TOOL - SAFELINK BYPASSER v2
+#   BARA HACK TOOL - SAFELINK BYPASSER v3
 #   Created by BARA
-#   Bypass SafelinkU / shortlink ads → link asli
+#   Pakai Selenium — bypass safelink pakai timer + button
 # ============================================================
 
 import re
+import time
 import base64
 import urllib.parse
 import requests
 from ui import (section, prompt, err, info, warn, ok, press_enter,
                 loading_bar, C_WHITE, C_YELLOW, C_GREEN, C_RED, C_CYAN)
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "id-ID,id;q=0.9,en;q=0.8",
-}
+
+# ============ CEK SELENIUM ============
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from webdriver_manager.chrome import ChromeDriverManager
+    SELENIUM_OK = True
+except ImportError:
+    SELENIUM_OK = False
 
 
-# ============ PATTERN BYPASS ============
+# ============ PATTERN BYPASS (FALLBACK) ============
 PATTERNS = [
-    # Base64 dalam JS variable
     r"var\s+url\s*=\s*['\"]([a-zA-Z0-9+/=]{20,})['\"]",
     r"var\s+link\s*=\s*['\"]([a-zA-Z0-9+/=]{20,})['\"]",
     r"var\s+target\s*=\s*['\"]([a-zA-Z0-9+/=]{20,})['\"]",
     r"var\s+redirect\s*=\s*['\"]([a-zA-Z0-9+/=]{20,})['\"]",
     r"var\s+destination\s*=\s*['\"]([a-zA-Z0-9+/=]{20,})['\"]",
-    r"var\s+dest\s*=\s*['\"]([a-zA-Z0-9+/=]{20,})['\"]",
-
-    # URL langsung dalam JS
     r"var\s+url\s*=\s*['\"](https?://[^'\"]+)['\"]",
     r"var\s+link\s*=\s*['\"](https?://[^'\"]+)['\"]",
-    r"var\s+target\s*=\s*['\"](https?://[^'\"]+)['\"]",
     r"window\.location\.href\s*=\s*['\"](https?://[^'\"]+)['\"]",
     r"location\.href\s*=\s*['\"](https?://[^'\"]+)['\"]",
-    r"window\.location\s*=\s*['\"](https?://[^'\"]+)['\"]",
     r"window\.open\s*\(\s*['\"](https?://[^'\"]+)['\"]",
-
-    # Meta refresh
     r'<meta\s+http-equiv=["\']refresh["\']\s+content=["\']\d+;\s*url=([^"\']+)["\']',
-    r'<meta\s+http-equiv=["\']refresh["\']\s+content=["\']\d+;\s*URL=([^"\']+)["\']',
-
-    # Anchor tag dengan teks "Get Link" / "Download"
-    r'<a[^>]+href=["\'](https?://[^"\']+)["\'][^>]*>\s*(?:Get\s*Link|Download|Lanjut|Continue|Klik|Click)',
-    
-    # data-url / data-href
     r'data-url=["\'](https?://[^"\']+)["\']',
     r'data-href=["\'](https?://[^"\']+)["\']',
-    r'data-target=["\'](https?://[^"\']+)["\']',
-    r'data-redirect=["\'](https?://[^"\']+)["\']',
-    r'data-link=["\'](https?://[^"\']+)["\']',
-    
-    # JSON
     r'"url"\s*:\s*"(https?://[^"]+)"',
     r'"link"\s*:\s*"(https?://[^"]+)"',
-    r'"target"\s*:\s*"(https?://[^"]+)"',
-    r'"redirect"\s*:\s*"(https?://[^"]+)"',
-    r'"destination"\s*:\s*"(https?://[^"]+)"',
-    
-    # Onclick handler
-    r'onclick=["\'][^"\']*?location\.(?:href\s*=\s*)?[\'"](https?://[^\'"]+)[\'"]',
-    
-    # Form action
-    r'<form[^>]+action=["\'](https?://[^"\']+)["\']',
 ]
 
-# Domain yang harus di-skip (bukan link tujuan)
 SKIP_DOMAINS = [
-    "safelinku.com", "sfl.gl", "safelink.me", "safelinkconverter",
+    "safelinku.com", "sfl.gl", "safelink.me",
     "google.com", "googleapis.com", "gstatic.com", "googletagmanager",
     "facebook.com", "fbcdn.net", "fb.com",
-    "cloudflare.com", "cloudflareinsights.com", "cloudflare.net",
-    "doubleclick.net", "googlesyndication.com", "google-analytics",
-    "jquery.com", "bootstrapcdn.com", "fontawesome",
-    "w3.org", "schema.org", "json-ld",
-    "twitter.com", "instagram.com", "youtube.com/embed",
-    "histats.com", "statcounter.com", "disqus.com",
+    "cloudflare.com", "cloudflareinsights.com",
+    "doubleclick.net", "googlesyndication.com",
+    "jquery.com", "bootstrapcdn.com",
 ]
 
 
-def is_skip(url):
-    """Cek apakah URL harus di-skip (bukan link tujuan)."""
+def is_skip(url, source_url=""):
     if not url:
         return True
+    if source_url and url == source_url:
+        return True
     url_lower = url.lower()
-    
-    # Skip domain
     for domain in SKIP_DOMAINS:
         if domain in url_lower:
             return True
-    
-    # Skip file statis
     if any(url_lower.endswith(ext) for ext in
            [".js", ".css", ".png", ".jpg", ".jpeg", ".gif",
-            ".svg", ".ico", ".woff", ".woff2", ".ttf", ".eot",
-            ".webp", ".mp4", ".mp3", ".wav"]):
+            ".svg", ".ico", ".woff", ".woff2", ".ttf", ".eot"]):
         return True
-    
-    # Skip URL sendiri (safelink)
-    if "sfl.gl" in url_lower or "safelinku" in url_lower:
-        return True
-    
     return False
 
 
 def try_b64_decode(s):
-    """Coba decode base64, kalau valid return, kalau gak return None."""
     try:
         s_pad = s + "=" * (-len(s) % 4)
         decoded = base64.b64decode(s_pad).decode("utf-8", errors="ignore")
@@ -119,75 +84,172 @@ def try_b64_decode(s):
 
 
 def extract_links(html, source_url=""):
-    """Ekstrak semua kemungkinan link tujuan dari HTML."""
+    """Ekstrak link dari HTML (fallback kalau selenium gagal)."""
     found = set()
-    
     for pattern in PATTERNS:
         try:
             matches = re.findall(pattern, html, re.IGNORECASE)
         except Exception:
             continue
-        
         for m in matches:
             if not m or not isinstance(m, str):
                 continue
             m = m.strip()
-            
-            # Skip url sendiri
-            if source_url and m == source_url:
-                continue
-            
-            # Coba decode base64
             b64 = try_b64_decode(m)
-            if b64:
-                if not is_skip(b64) and b64 != source_url:
-                    found.add(b64)
+            if b64 and not is_skip(b64, source_url):
+                found.add(b64)
                 continue
-            
-            # Coba URL decode
             try:
                 decoded = urllib.parse.unquote(m)
-                if decoded.startswith("http") and not is_skip(decoded) and decoded != source_url:
+                if decoded.startswith("http") and not is_skip(decoded, source_url):
                     found.add(decoded)
             except Exception:
                 pass
-            
-            # Langsung URL
-            if m.startswith("http") and not is_skip(m) and m != source_url:
+            if m.startswith("http") and not is_skip(m, source_url):
                 found.add(m)
-    
     return list(found)
 
 
-def fetch_and_extract(url):
-    """Fetch URL dan ekstrak link tujuan."""
+# ============ SELENIUM BYPASS ============
+def selenium_bypass(url):
+    """Bypass pakai headless Chrome."""
+    info("Menjalankan headless Chrome...")
+    print()
+
+    # Setup Chrome headless
+    opts = Options()
+    opts.add_argument("--headless=new")           # headless baru
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--window-size=1920,1080")
+    opts.add_argument("--log-level=3")            # cuma error
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    opts.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+    opts.add_experimental_option("useAutomationExtension", False)
+    opts.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    )
+
+    driver = None
     try:
-        r = requests.get(url, headers=HEADERS, timeout=15, allow_redirects=True)
-        final_url = r.url  # URL setelah redirect
+        info("Setup chromedriver...")
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=opts)
+        driver.set_page_load_timeout(30)
+
+        # Buka URL
+        info(f"Membuka: {url}")
+        driver.get(url)
+
+        # Tunggu load
+        time.sleep(3)
+
+        original_url = url
+        final_url = driver.current_url
         
-        if r.status_code != 200:
-            err(f"HTTP {r.status_code}")
-            return None, []
+        # Loop: tunggu 20 detik, cek redirect
+        max_wait = 25
+        start = time.time()
         
-        html = r.text
+        while time.time() - start < max_wait:
+            current = driver.current_url
+            
+            # Kalau URL berubah (redirect otomatis)
+            if current != original_url and not is_skip(current, original_url):
+                info(f"Redirect otomatis: {current}")
+                final_url = current
+                break
+            
+            # Cari button "Get Link" / "Download" / dll
+            try:
+                buttons = driver.find_elements(By.XPATH, 
+                    "//*[contains(translate(text(), 'GETLINKDOWNLOADCONTINUELANJUTKLIK', "
+                    "'getlinkdownloadcontinuclanjutklik'), 'getlink') "
+                    "or contains(translate(text(), 'GETLINKDOWNLOADCONTINUELANJUTKLIK', "
+                    "'getlinkdownloadcontinuclanjutklik'), 'download') "
+                    "or contains(translate(text(), 'GETLINKDOWNLOADCONTINUELANJUTKLIK', "
+                    "'getlinkdownloadcontinuclanjutklik'), 'continue') "
+                    "or contains(translate(text(), 'GETLINKDOWNLOADCONTINUELANJUTKLIK', "
+                    "'getlinkdownloadcontinuclanjutklik'), 'lanjut')]"
+                )
+                
+                for btn in buttons:
+                    try:
+                        if btn.is_displayed() and btn.is_enabled():
+                            driver.execute_script("arguments[0].click();", btn)
+                            info(f"Klik button: {btn.text[:30]}")
+                            time.sleep(2)
+                            break
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            
+            time.sleep(1)
         
-        # Kalau ada redirect langsung ke link tujuan
-        if final_url != url and not is_skip(final_url):
-            info(f"Redirect terdeteksi: {final_url}")
+        # Ambil URL final
+        final_url = driver.current_url
+        page_source = driver.page_source
         
-        links = extract_links(html, source_url=url)
+        # Cari link di page source juga (untuk jaga-jaga)
+        links_in_html = extract_links(page_source, source_url=original_url)
+        
+        return final_url, links_in_html
+    
+    except Exception as e:
+        err(f"Selenium error: {e}")
+        return None, []
+    
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+
+
+def requests_bypass(url):
+    """Fallback: bypass pakai requests biasa."""
+    try:
+        r = requests.get(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/120.0.0.0 Safari/537.36"
+        }, timeout=15, allow_redirects=True)
+        
+        final_url = r.url
+        links = extract_links(r.text, source_url=url)
         return final_url, links
     except Exception as e:
-        err(f"Fetch error: {e}")
+        err(f"Requests error: {e}")
         return None, []
 
 
+# ============ FUNGSI UTAMA ============
 def bypass_safelink():
-    """Fungsi utama — dipanggil dari main.py."""
     section("BYPASS SAFELINKU")
     info("Bypass link safelink / shortlink ads")
-    print()
     
+    if not SELENIUM_OK:
+        print()
+        warn("Selenium belum keinstall!")
+        print(f"{C_WHITE}    Install dulu:")
+        print(f"{C_YELLOW}    pip install selenium webdriver-manager")
+        print()
+        info("Kalau gak mau install Selenium, pakai mode 'requests' (kurang akurat).")
+        print()
+        mode = prompt("Pakai mode requests aja? (y/n)")
+        if mode.lower() != "y":
+            press_enter()
+            return
+        use_selenium = False
+    else:
+        use_selenium = True
+    
+    print()
     url = prompt("Masukkan URL safelink")
     if not url:
         err("URL kosong.")
@@ -199,7 +261,10 @@ def bypass_safelink():
     
     print()
     warn(f"Target: {url}")
-    info("Proses: fetch HTML → parse → ekstrak link tujuan")
+    if use_selenium:
+        info("Mode: Selenium (headless Chrome) — tunggu 20-30 detik")
+    else:
+        info("Mode: requests (fallback)")
     print()
     confirm = prompt("Lanjut bypass? (y/n)")
     
@@ -209,43 +274,35 @@ def bypass_safelink():
         return
     
     print()
-    info(f"Fetching: {url}")
     loading_bar("Bypass")
     
-    final_url, links = fetch_and_extract(url)
+    # Bypass
+    if use_selenium:
+        final_url, links = selenium_bypass(url)
+    else:
+        final_url, links = requests_bypass(url)
     
     print()
     
-    # Kalau ada redirect langsung
-    if final_url and final_url != url and not is_skip(final_url):
-        print(f"{C_GREEN}  [✓] Redirect langsung ke:")
-        print(f"{C_YELLOW}      {final_url}\n")
+    # Hasil
+    result = None
     
-    # Kalau ada link hasil parse
+    # 1. Cek final URL
+    if final_url and final_url != url and not is_skip(final_url, url):
+        result = final_url
+        print(f"{C_GREEN}  [✓] Final URL: {C_YELLOW}{final_url}\n")
+    
+    # 2. Cek links di HTML
     if links:
-        print(f"{C_GREEN}  [✓] Ketemu {len(links)} link kandidat:\n")
+        print(f"{C_GREEN}  [✓] Ketemu {len(links)} link di HTML:\n")
         for i, link in enumerate(links, 1):
             print(f"{C_WHITE}    [{i}] {C_YELLOW}{link}")
-        
-        # Ambil link pertama
-        result = links[0]
-        
-        print(f"\n{C_GREEN}  ╔══════════════════════════════════════════════╗")
-        print(f"{C_GREEN}  ║  {C_YELLOW}🔥 BYPASS BERHASIL! 🔥{C_GREEN}                       ║")
-        print(f"{C_GREEN}  ╚══════════════════════════════════════════════╝\n")
-        print(f"{C_WHITE}  Link asli: {C_YELLOW}{result}\n")
-        
-        # Tanya buka browser
-        open_b = prompt("Buka di browser? (y/n)")
-        if open_b.lower() == "y":
-            import webbrowser
-            webbrowser.open(result)
-            ok("Dibuka di browser.")
+        if not result:
+            result = links[0]
+        print()
     
-    elif final_url and final_url != url and not is_skip(final_url):
-        # Pakai redirect URL
-        result = final_url
-        
+    # Tampilkan hasil
+    if result:
         print(f"{C_GREEN}  ╔══════════════════════════════════════════════╗")
         print(f"{C_GREEN}  ║  {C_YELLOW}🔥 BYPASS BERHASIL! 🔥{C_GREEN}                       ║")
         print(f"{C_GREEN}  ╚══════════════════════════════════════════════╝\n")
@@ -256,15 +313,14 @@ def bypass_safelink():
             import webbrowser
             webbrowser.open(result)
             ok("Dibuka di browser.")
-    
     else:
         err("Gak ketemu link tujuan.")
         print()
         warn("Kemungkinan:")
-        print(f"{C_WHITE}    • Safelink pakai JavaScript obfuscation")
-        print(f"{C_WHITE}    • Butuh timer + form POST")
-        print(f"{C_WHITE}    • Pakai CAPTCHA / Cloudflare")
-        print(f"{C_WHITE}    • Butuh klik manual di browser")
+        print(f"{C_WHITE}    • Butuh login / verifikasi manual")
+        print(f"{C_WHITE}    • Pakai CAPTCHA")
+        print(f"{C_WHITE}    • Cloudflare challenge")
+        print(f"{C_WHITE}    • Timer lebih dari 30 detik")
         print()
         info("Coba buka manual: " + url)
         
